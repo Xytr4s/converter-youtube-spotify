@@ -1,36 +1,41 @@
-# 🎧 Converter YouTube → Spotify
+# 🎧 YouTube → Spotify Converter
 
-Copia automaticamente una playlist YouTube su Spotify (**musica, episodi di podcast e clip di podcast**)
-e permette di **passare da una piattaforma all'altra allo stesso minuto**.
+🇬🇧 **English** · 🇮🇹 [Italiano](README.it.md)
 
-## Funzioni
+Automatically copies a YouTube playlist to Spotify (**music, podcast episodes and podcast clips**) and lets you **switch from one platform to the other at the same minute**.
 
-| Comando | Cosa fa |
+📖 **Full guide in the [wiki](https://github.com/Xytr4s/converter-youtube-spotify/wiki).**
+
+> Messages printed by the program are in Italian.
+
+## Features
+
+| Command | What it does |
 |---|---|
-| `sync.bat` / `python converter.py sync` | Aggiunge alla playlist Spotify i nuovi video della playlist YouTube e riprova quelli non trovati |
-| `riprendi.bat` | Su YouTube: tasto destro → *Copia URL del video all'ora corrente*, poi `riprendi.bat`: Spotify riparte da quel punto |
-| `torna.bat` | Mette in pausa Spotify e apre il video corrispondente su YouTube allo stesso minuto |
-| `python converter.py mancanti` | Elenca i video non trovati su Spotify |
-| `python converter.py collega CLIP DEST [mm:ss]` | Abbina a mano una clip all'episodio intero (link YouTube con `?t=` o link Spotify) |
-| `python converter.py auto` | Sync silenzioso con log in `sync.log` e notifica di Windows per i video non trovati (per l'Utilità di pianificazione) |
+| `sync.bat` / `python converter.py sync` | Adds new videos from the YouTube playlist to the Spotify playlist and retries those not found |
+| `riprendi.bat` *(resume)* | On YouTube: right-click → *Copy video URL at current time*, then `riprendi.bat`: Spotify resumes from that point |
+| `torna.bat` *(go back)* | Pauses Spotify and opens the matching YouTube video at the same minute |
+| `python converter.py mancanti` | Lists videos not found on Spotify |
+| `python converter.py collega CLIP DEST [mm:ss]` | Manually links a clip to the full episode (YouTube link with `?t=` or Spotify link) |
+| `python converter.py auto` | Silent sync with log in `sync.log` and a Windows notification for videos not found (for Task Scheduler) |
 
-## Come abbina i video
+## How videos are matched
 
-- **Musica** (categoria Musica, canali "- Topic"/VEVO): pulisce il titolo (*"(Official Video)"*, *"[HD]"*…) e cerca artista + brano.
-- **Episodi** (video lunghi, soglia configurabile): trova il podcast dal link Spotify nella descrizione o dal nome del canale, poi l'episodio per **numero** (`#324`, `Ep. 45`), titolo e **durata**.
-- **Clip**: risale all'episodio intero tramite il link nella descrizione; se il link ha `?t=` sa anche in che punto dell'episodio inizia la clip.
+- **Music** (Music category, "- Topic"/VEVO channels): cleans the title (*"(Official Video)"*, *"[HD]"*…) and searches artist + track.
+- **Episodes** (long videos, configurable threshold): finds the podcast from the Spotify link in the description or the channel name, then the episode by **number** (`#324`, `Ep. 45`), title and **duration**.
+- **Clips**: traces back to the full episode through the link in the description; if the link has `?t=` it also knows where in the episode the clip starts.
 
-## Installazione
+## Installation
 
 1. `pip install -r requirements.txt`
-2. Chiave API di **YouTube Data API v3** (Google Cloud Console → Credenziali → Chiave API).
-3. App su **Spotify Developer Dashboard** con Redirect URI `http://127.0.0.1:8888/callback` (Web API).
-4. Copia `.env.example` in `.env` e compila i valori. La playlist YouTube deve essere *Pubblica* o *Non in elenco*.
-5. `sync.bat`: la prima volta si apre il browser per autorizzare Spotify.
+2. An API key for **YouTube Data API v3** (Google Cloud Console → Credentials → API key).
+3. An app on the **Spotify Developer Dashboard** with Redirect URI `http://127.0.0.1:8888/callback` (Web API).
+4. Copy `.env.example` to `.env` and fill in the values. The YouTube playlist must be *Public* or *Unlisted*.
+5. `sync.bat`: the first time a browser opens to authorize Spotify.
 
-Per far partire la riproduzione (`riprendi` / `torna`) serve Spotify **Premium** e un dispositivo Spotify aperto.
+Starting playback (`riprendi` / `torna`) requires Spotify **Premium** and an open Spotify device.
 
-### Sync automatico ogni ora (Windows)
+### Hourly automatic sync (Windows)
 
 ```powershell
 $dir = (Get-Location).Path
@@ -39,6 +44,6 @@ $t = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInte
 Register-ScheduledTask -TaskName "Converter YouTube-Spotify" -Action $a -Trigger $t
 ```
 
-## File locali (non nel repo)
+## Local files (not in the repo)
 
-`.env` (chiavi), `.spotify_token` (accesso Spotify), `stato.json` (abbinamenti), `sync.log`.
+`.env` (keys), `.spotify_token` (Spotify access), `stato.json` (matches), `sync.log`.
