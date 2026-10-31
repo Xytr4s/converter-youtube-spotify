@@ -6,7 +6,7 @@ Automatically copies a YouTube playlist to Spotify (**music, podcast episodes an
 
 📖 **Full guide in the [wiki](https://github.com/Xytr4s/converter-youtube-spotify/wiki).**
 
-> Messages printed by the program are in Italian.
+> Messages are available in **English** and **Italian**: set `LINGUA=en` or `LINGUA=it` in `.env` (default: Italian).
 
 ## Features
 
@@ -30,7 +30,7 @@ Automatically copies a YouTube playlist to Spotify (**music, podcast episodes an
 1. `pip install -r requirements.txt`
 2. An API key for **YouTube Data API v3** (Google Cloud Console → Credentials → API key).
 3. An app on the **Spotify Developer Dashboard** with Redirect URI `http://127.0.0.1:8888/callback` (Web API).
-4. Copy `.env.example` to `.env` and fill in the values. The YouTube playlist must be *Public* or *Unlisted*.
+4. Copy `.env.example` to `.env` and fill in the values (add `LINGUA=en` for English messages). The YouTube playlist must be *Public* or *Unlisted*.
 5. `sync.bat`: the first time a browser opens to authorize Spotify.
 
 Starting playback (`riprendi` / `torna`) requires Spotify **Premium** and an open Spotify device.

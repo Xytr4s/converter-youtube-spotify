@@ -1,13 +1,5 @@
 """Converter YouTube -> Spotify (musica, episodi di podcast, clip di podcast).
-
-Comandi:
-  python converter.py sync           Copia i nuovi video della playlist YouTube nella playlist Spotify
-  python converter.py riprendi [URL] Continua su Spotify il video YouTube (URL o appunti, con ?t=)
-  python converter.py torna          Passa da Spotify al video YouTube corrispondente
-  python converter.py mancanti       Elenca i video non trovati su Spotify
-  python converter.py collega CLIP DEST [mm:ss]
-                                     Abbina a mano: DEST = link YouTube dell'episodio intero
-                                     (con ?t= dove inizia la clip) o link Spotify dell'episodio
+Lingua dei messaggi: LINGUA=it|en nel file .env. Vedi MESSAGGI qui sotto.
 """
 
 import json
@@ -26,6 +18,94 @@ from dotenv import load_dotenv
 BASE = Path(__file__).resolve().parent
 STATE_FILE = BASE / "stato.json"
 load_dotenv(BASE / ".env")
+
+# ================================================================ lingua
+
+LINGUA = (os.getenv("LINGUA") or "it").lower()[:2]
+
+MESSAGGI = {
+    "it": {
+        "aiuto": """Converter YouTube -> Spotify
+
+Comandi:
+  python converter.py sync           Copia i nuovi video della playlist YouTube nella playlist Spotify
+  python converter.py riprendi [URL] Continua su Spotify il video YouTube (URL o appunti, con ?t=)
+  python converter.py torna          Passa da Spotify al video YouTube corrispondente
+  python converter.py mancanti       Elenca i video non trovati su Spotify
+  python converter.py collega CLIP DEST [mm:ss]
+                                     Abbina a mano: DEST = link YouTube dell'episodio intero
+                                     (con ?t= dove inizia la clip) o link Spotify dell'episodio
+  python converter.py auto           Sync silenzioso con log in sync.log (per l'Utilità di pianificazione)""",
+        "manca_env": "Manca {name} nel file .env (vedi .env.example).",
+        "notifica_ko": "(notifica non riuscita: {e})",
+        "errore_yt": "Errore YouTube ({code}): {testo}",
+        "tipo_musica": "musica", "tipo_episodio": "episodio", "tipo_clip": "clip",
+        "et_episodio": "[episodio] {nome}", "et_clip_a": "[clip @ {t}] {nome}", "et_clip_ignoto": "[clip, punto ignoto] {nome}",
+        "playlist_nome": "Da YouTube", "playlist_descr": "Sincronizzata da YouTube con converter.py",
+        "nessun_dispositivo": "Nessun dispositivo Spotify trovato: apri Spotify (PC o telefono) e riprova.",
+        "playlist_creata": "Creata playlist Spotify '{nome}'.",
+        "ok": "  OK  {titolo}\n      -> {trovato}",
+        "non_trovato": "  ??  {titolo}  ({tipo}, non trovato)",
+        "fatto": "Fatto: {n} elementi aggiunti alla playlist Spotify.",
+        "notifica_1": "1 video non trovato su Spotify", "notifica_n": "{n} video non trovati su Spotify",
+        "e_altri": "\n…e altri {n}", "usa_collega": "\nUsa 'collega' per abbinarli a mano.",
+        "no_link_appunti": "Negli appunti non c'è un link YouTube.\nSu YouTube: tasto destro sul video -> 'Copia URL del video all'ora corrente'.",
+        "video_non_trovato": "Video non trovato su YouTube.",
+        "non_trovo": "Non trovo su Spotify: {titolo}",
+        "clip_inizio_ignoto": "Non so in che punto dell'episodio sta questa clip: parto dall'inizio dell'episodio.",
+        "su_spotify": "Su Spotify ({tipo}) da {t}.",
+        "niente_in_ascolto": "Su Spotify non sta suonando niente.",
+        "aperto_youtube": "Aperto YouTube da {t}.",
+        "arg1": "Il primo argomento deve essere il link YouTube del video da collegare.",
+        "arg2": "Il secondo argomento deve essere un link YouTube o Spotify valido.",
+        "non_trovo_episodio": "Non trovo su Spotify l'episodio: {titolo}",
+        "collegato": "Collegato: {titolo}\n  -> {uri}", "clip_inizia": " (la clip inizia a {t})",
+        "mancanti": "{n} video non trovati su Spotify.",
+    },
+    "en": {
+        "aiuto": """YouTube -> Spotify Converter
+
+Commands:
+  python converter.py sync           Copy new videos from the YouTube playlist to the Spotify playlist
+  python converter.py riprendi [URL] Resume the YouTube video on Spotify (URL or clipboard, with ?t=)
+  python converter.py torna          Switch from Spotify to the matching YouTube video
+  python converter.py mancanti       List videos not found on Spotify
+  python converter.py collega CLIP DEST [mm:ss]
+                                     Link by hand: DEST = YouTube link of the full episode
+                                     (with ?t= where the clip starts) or Spotify episode link
+  python converter.py auto           Silent sync logging to sync.log (for Task Scheduler)""",
+        "manca_env": "{name} is missing from the .env file (see .env.example).",
+        "notifica_ko": "(notification failed: {e})",
+        "errore_yt": "YouTube error ({code}): {testo}",
+        "tipo_musica": "music", "tipo_episodio": "episode", "tipo_clip": "clip",
+        "et_episodio": "[episode] {nome}", "et_clip_a": "[clip @ {t}] {nome}", "et_clip_ignoto": "[clip, start unknown] {nome}",
+        "playlist_nome": "From YouTube", "playlist_descr": "Synced from YouTube with converter.py",
+        "nessun_dispositivo": "No Spotify device found: open Spotify (PC or phone) and try again.",
+        "playlist_creata": "Created Spotify playlist '{nome}'.",
+        "ok": "  OK  {titolo}\n      -> {trovato}",
+        "non_trovato": "  ??  {titolo}  ({tipo}, not found)",
+        "fatto": "Done: {n} items added to the Spotify playlist.",
+        "notifica_1": "1 video not found on Spotify", "notifica_n": "{n} videos not found on Spotify",
+        "e_altri": "\n…and {n} more", "usa_collega": "\nUse 'collega' to link them by hand.",
+        "no_link_appunti": "There's no YouTube link in the clipboard.\nOn YouTube: right-click the video -> 'Copy video URL at current time'.",
+        "video_non_trovato": "Video not found on YouTube.",
+        "non_trovo": "Can't find on Spotify: {titolo}",
+        "clip_inizio_ignoto": "I don't know where in the episode this clip is: starting from the beginning of the episode.",
+        "su_spotify": "On Spotify ({tipo}) from {t}.",
+        "niente_in_ascolto": "Nothing is playing on Spotify.",
+        "aperto_youtube": "Opened YouTube at {t}.",
+        "arg1": "The first argument must be the YouTube link of the video to link.",
+        "arg2": "The second argument must be a valid YouTube or Spotify link.",
+        "non_trovo_episodio": "Can't find the episode on Spotify: {titolo}",
+        "collegato": "Linked: {titolo}\n  -> {uri}", "clip_inizia": " (the clip starts at {t})",
+        "mancanti": "{n} videos not found on Spotify.",
+    },
+}
+
+
+def m(chiave, **kw):
+    testo = MESSAGGI.get(LINGUA, MESSAGGI["it"]).get(chiave) or MESSAGGI["it"][chiave]
+    return testo.format(**kw)
 
 SCOPES = " ".join([
     "playlist-read-private",
@@ -47,7 +127,7 @@ CATEGORIA_MUSICA = "10"
 def env(name, default=None):
     value = os.getenv(name) or default
     if not value:
-        sys.exit(f"Manca {name} nel file .env (vedi .env.example).")
+        sys.exit(m("manca_env", name=name))
     return value
 
 
@@ -145,7 +225,7 @@ def notifica(titolo, testo):
         subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), timeout=30)
     except Exception as e:
-        print(f"(notifica non riuscita: {e})")
+        print(m("notifica_ko", e=e))
 
 
 def simile(a, b):
@@ -158,7 +238,7 @@ def yt_get(endpoint, **params):
     params["key"] = env("YOUTUBE_API_KEY")
     r = requests.get(f"{YT_API}/{endpoint}", params=params, timeout=30)
     if r.status_code != 200:
-        sys.exit(f"Errore YouTube ({r.status_code}): {r.text[:300]}")
+        sys.exit(m("errore_yt", code=r.status_code, testo=r.text[:300]))
     return r.json()
 
 
@@ -334,7 +414,7 @@ def trova_show(sp, canale, state):
 def cerca_episodio(sp, v, state):
     """Restituisce (uri, descrizione) dell'episodio Spotify corrispondente al video completo v."""
     titolo = pulisci_episodio(v["titolo"], v["canale"])
-    trovato = lambda e: (e["uri"], f"[episodio] {e['name']}")
+    trovato = lambda e: (e["uri"], e["name"])
 
     # 1) Il podcast: dal link Spotify nella descrizione, altrimenti dal nome del canale.
     m = re.search(r"open\.spotify\.com/show/([A-Za-z0-9]{22})", v.get("descrizione", ""))
@@ -392,13 +472,16 @@ def abbina(sp, v, state):
             if rec["spotify"]:
                 rec["tipo"] = "musica"
         elif trovato:
-            trovato = trovato.replace("[episodio]", f"[clip @ {mmss(inizio)}]" if inizio else "[clip, punto ignoto]")
+            trovato = m("et_clip_a", t=mmss(inizio), nome=trovato) if inizio else m("et_clip_ignoto", nome=trovato)
+            return rec, trovato
+    if rec["tipo"] == "episodio" and trovato:
+        trovato = m("et_episodio", nome=trovato)
     return rec, trovato
 
 
 def crea_playlist(sp, nome):
     body = {"name": nome, "public": False,
-            "description": "Sincronizzata da YouTube con converter.py"}
+            "description": m("playlist_descr")}
     try:
         return sp._post("me/playlists", payload=body)["id"]
     except spotipy.SpotifyException:
@@ -417,7 +500,7 @@ def aggiungi_alla_playlist(sp, playlist_id, uris):
 def dispositivo_attivo(sp):
     devs = sp.devices()["devices"]
     if not devs:
-        sys.exit("Nessun dispositivo Spotify trovato: apri Spotify (PC o telefono) e riprova.")
+        sys.exit(m("nessun_dispositivo"))
     return next((d for d in devs if d["is_active"]), devs[0])["id"]
 
 
@@ -427,10 +510,10 @@ def cmd_sync():
     state = load_state()
     sp = client_spotify()
     if not state["spotify_playlist_id"]:
-        nome = os.getenv("SPOTIFY_PLAYLIST_NAME") or "Da YouTube"
+        nome = os.getenv("SPOTIFY_PLAYLIST_NAME") or m("playlist_nome")
         state["spotify_playlist_id"] = crea_playlist(sp, nome)
         save_state(state)
-        print(f"Creata playlist Spotify '{nome}'.")
+        print(m("playlist_creata", nome=nome))
 
     gia_presenti = {r["spotify"] for r in state["video"].values() if r.get("spotify")}
     # Nuovi video + quelli non trovati le volte scorse (magari ora sono su Spotify).
@@ -451,30 +534,29 @@ def cmd_sync():
         state["video"][vid] = rec
         uri = rec["spotify"]
         if uri:
-            print(f"  OK  {rec['titolo']}\n      -> {trovato}")
+            print(m("ok", titolo=rec["titolo"], trovato=trovato))
             if uri not in gia_presenti:  # due clip dello stesso episodio = un solo episodio
                 da_aggiungere.append(uri)
                 gia_presenti.add(uri)
         else:
-            print(f"  ??  {rec['titolo']}  ({rec['tipo']}, non trovato)")
+            print(m("non_trovato", titolo=rec["titolo"], tipo=m("tipo_" + rec["tipo"])))
         save_state(state)
 
     if da_aggiungere:
         aggiungi_alla_playlist(sp, state["spotify_playlist_id"], da_aggiungere)
-    print(f"Fatto: {len(da_aggiungere)} elementi aggiunti alla playlist Spotify.")
+    print(m("fatto", n=len(da_aggiungere)))
     if da_avvisare:
         n = len(da_avvisare)
-        titolo = "1 video non trovato su Spotify" if n == 1 else f"{n} video non trovati su Spotify"
-        elenco = "\n".join(f"• {t[:70]}" for t in da_avvisare[:3]) + (f"\n…e altri {n - 3}" if n > 3 else "")
-        notifica(titolo, elenco + "\nUsa 'collega' per abbinarli a mano.")
+        titolo = m("notifica_1") if n == 1 else m("notifica_n", n=n)
+        elenco = "\n".join(f"• {t[:70]}" for t in da_avvisare[:3]) + (m("e_altri", n=n - 3) if n > 3 else "")
+        notifica(titolo, elenco + m("usa_collega"))
 
 
 def cmd_riprendi(url=None):
     url = url or leggi_appunti()
     vid, secondi = parse_url_youtube(url) if "youtu" in url else (None, 0)
     if not vid:
-        sys.exit("Negli appunti non c'è un link YouTube.\n"
-                 "Su YouTube: tasto destro sul video -> 'Copia URL del video all'ora corrente'.")
+        sys.exit(m("no_link_appunti"))
     state = load_state()
     sp = client_spotify()
 
@@ -483,11 +565,11 @@ def cmd_riprendi(url=None):
     if not rec or not rec.get("spotify"):
         dettagli = dettagli_video([vid])
         if vid not in dettagli:
-            sys.exit("Video non trovato su YouTube.")
+            sys.exit(m("video_non_trovato"))
         rec, _ = abbina(sp, dettagli[vid], state)
         save_state(state)  # salva la cache dei podcast trovati
         if not rec["spotify"]:
-            sys.exit(f"Non trovo su Spotify: {rec['titolo']}")
+            sys.exit(m("non_trovo", titolo=rec["titolo"]))
 
     posizione = secondi
     if rec["tipo"] == "clip":
@@ -495,7 +577,7 @@ def cmd_riprendi(url=None):
             posizione = rec["inizio"] + secondi
         else:
             posizione = 0
-            print("Non so in che punto dell'episodio sta questa clip: parto dall'inizio dell'episodio.")
+            print(m("clip_inizio_ignoto"))
 
     device = dispositivo_attivo(sp)
     if in_playlist:
@@ -504,7 +586,7 @@ def cmd_riprendi(url=None):
                           offset={"uri": rec["spotify"]}, position_ms=posizione * 1000)
     else:
         sp.start_playback(device_id=device, uris=[rec["spotify"]], position_ms=posizione * 1000)
-    print(f"Su Spotify ({rec['tipo']}) da {mmss(posizione)}.")
+    print(m("su_spotify", tipo=m("tipo_" + rec["tipo"]), t=mmss(posizione)))
 
 
 def cmd_torna():
@@ -512,7 +594,7 @@ def cmd_torna():
     sp = client_spotify()
     pb = sp.current_playback(additional_types="episode")
     if not pb or not pb.get("item"):
-        sys.exit("Su Spotify non sta suonando niente.")
+        sys.exit(m("niente_in_ascolto"))
     item = pb["item"]
     uri, secondi = item["uri"], pb["progress_ms"] // 1000
     if pb["is_playing"]:
@@ -538,7 +620,7 @@ def cmd_torna():
         autore = item["show"]["name"] if item["type"] == "episode" else item["artists"][0]["name"]
         url = "https://www.youtube.com/results?search_query=" + quote(f"{autore} {item['name']}")
     webbrowser.open(url)
-    print(f"Aperto YouTube da {mmss(secondi)}.")
+    print(m("aperto_youtube", t=mmss(secondi)))
 
 
 def secondi_da_testo(t):
@@ -556,19 +638,19 @@ def cmd_collega(video_url, destinazione, inizio=None):
        - il link Spotify dell'episodio/brano (+ eventuale minuto di inizio mm:ss)."""
     vid, _ = parse_url_youtube(video_url)
     if not vid:
-        sys.exit("Il primo argomento deve essere il link YouTube del video da collegare.")
+        sys.exit(m("arg1"))
     state = load_state()
     sp = client_spotify()
     info = dettagli_video([vid]).get(vid)
     if not info:
-        sys.exit("Video non trovato su YouTube.")
+        sys.exit(m("video_non_trovato"))
     rec = {"titolo": info["titolo"], "tipo": classifica(info), "spotify": None,
            "inizio": 0, "manuale": True}
 
-    m = re.search(r"open\.spotify\.com/(episode|track)/([A-Za-z0-9]{22})", destinazione)
-    if m:
-        rec["spotify"] = f"spotify:{m.group(1)}:{m.group(2)}"
-        if m.group(1) == "track":
+    link_sp = re.search(r"open\.spotify\.com/(episode|track)/([A-Za-z0-9]{22})", destinazione)
+    if link_sp:
+        rec["spotify"] = f"spotify:{link_sp.group(1)}:{link_sp.group(2)}"
+        if link_sp.group(1) == "track":
             rec["tipo"] = "musica"
         if inizio:
             rec["inizio"] = secondi_da_testo(inizio)
@@ -576,10 +658,10 @@ def cmd_collega(video_url, destinazione, inizio=None):
         completo_id, t = parse_url_youtube(destinazione)
         completo = dettagli_video([completo_id]).get(completo_id) if completo_id else None
         if not completo:
-            sys.exit("Il secondo argomento deve essere un link YouTube o Spotify valido.")
+            sys.exit(m("arg2"))
         rec["spotify"], _ = cerca_episodio(sp, completo, state)
         if not rec["spotify"]:
-            sys.exit(f"Non trovo su Spotify l'episodio: {completo['titolo']}")
+            sys.exit(m("non_trovo_episodio", titolo=completo["titolo"]))
         rec["video_completo"] = completo_id
         rec["inizio"] = secondi_da_testo(inizio) if inizio else t
 
@@ -592,16 +674,16 @@ def cmd_collega(video_url, destinazione, inizio=None):
     if rec["spotify"] not in gia and state["spotify_playlist_id"]:
         aggiungi_alla_playlist(sp, state["spotify_playlist_id"], [rec["spotify"]])
     save_state(state)
-    print(f"Collegato: {rec['titolo']}\n  -> {rec['spotify']}"
-          + (f" (la clip inizia a {mmss(rec['inizio'])})" if rec["inizio_noto"] else ""))
+    print(m("collegato", titolo=rec["titolo"], uri=rec["spotify"])
+          + (m("clip_inizia", t=mmss(rec["inizio"])) if rec["inizio_noto"] else ""))
 
 
 def cmd_mancanti():
     state = load_state()
     mancanti = [(k, r) for k, r in state["video"].items() if not r.get("spotify")]
     for k, r in mancanti:
-        print(f"https://youtu.be/{k}  [{r.get('tipo', '?')}]  {r['titolo']}")
-    print(f"{len(mancanti)} video non trovati su Spotify.")
+        print(f"https://youtu.be/{k}  [{m('tipo_' + r['tipo']) if r.get('tipo') else '?'}]  {r['titolo']}")
+    print(m("mancanti", n=len(mancanti)))
 
 
 if __name__ == "__main__":
@@ -633,4 +715,4 @@ if __name__ == "__main__":
     elif comando == "collega" and len(args) >= 3:
         cmd_collega(args[1], args[2], args[3] if len(args) > 3 else None)
     else:
-        print(__doc__)
+        print(m("aiuto"))

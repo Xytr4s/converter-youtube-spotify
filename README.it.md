@@ -27,7 +27,7 @@ e permette di **passare da una piattaforma all'altra allo stesso minuto**.
 1. `pip install -r requirements.txt`
 2. Chiave API di **YouTube Data API v3** (Google Cloud Console → Credenziali → Chiave API).
 3. App su **Spotify Developer Dashboard** con Redirect URI `http://127.0.0.1:8888/callback` (Web API).
-4. Copia `.env.example` in `.env` e compila i valori. La playlist YouTube deve essere *Pubblica* o *Non in elenco*.
+4. Copia `.env.example` in `.env` e compila i valori (`LINGUA=it` o `LINGUA=en` sceglie la lingua dei messaggi). La playlist YouTube deve essere *Pubblica* o *Non in elenco*.
 5. `sync.bat`: la prima volta si apre il browser per autorizzare Spotify.
 
 Per far partire la riproduzione (`riprendi` / `torna`) serve Spotify **Premium** e un dispositivo Spotify aperto.
