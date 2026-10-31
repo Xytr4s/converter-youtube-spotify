@@ -1,0 +1,6 @@
+.env
+.spotify_token
+stato.json
+sync.log
+sync.old.log
+__pycache__/
